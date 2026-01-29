@@ -37,6 +37,7 @@ class PhoneHintAndroidPlugin : FlutterPlugin,
                 "Activity not initialised",
                 null,
             )
+            channelResult = null
             return
         }
         Identity.getSignInClient(activity!!)
@@ -60,6 +61,7 @@ class PhoneHintAndroidPlugin : FlutterPlugin,
                         "Launching the PendingIntent failed",
                         null
                     )
+                    channelResult = null
                 }
             }
             .addOnFailureListener {
@@ -69,18 +71,26 @@ class PhoneHintAndroidPlugin : FlutterPlugin,
                     "Phone Number Hint failed ${it.message}",
                     null
                 )
+
+                channelResult = null
             }
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        channelResult = result
+
         when (call.method) {
             "getPhoneNumber" -> {
-                requestPhoneHint()
+                if(channelResult !=null){
+                    result.error("ALREADY_RUNNING","A phone hint request is already in progress", null)
+                }else{
+                    channelResult = result
+                    requestPhoneHint()
+                }
+
             }
 
             else -> {
-                channelResult?.notImplemented()
+              result.notImplemented()
             }
         }
     }
@@ -119,13 +129,19 @@ class PhoneHintAndroidPlugin : FlutterPlugin,
                 if (data != null && resultCode == Activity.RESULT_OK && activity != null) {
                     val phoneNumber =
                         Identity.getSignInClient(activity!!).getPhoneNumberFromIntent(data)
+
+
                     channelResult?.success(phoneNumber)
+                    channelResult = null
                 } else {
+
+
                     channelResult?.error(
                         "PHONE_HINT_FAILURE",
                         "User dismissed phone hint",
                         null,
                     )
+                    channelResult = null
                 }
             }
         }
